@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Dose India Cricket Pro</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#07111f;color:white;font-family:Arial,sans-serif}
+header{background:#101f35;padding:20px;border-bottom:2px solid #16c784}
+header h1{margin:0;color:#20d997;font-size:23px}
+header p{margin:7px 0 0;color:#a9bbd0}
+.container{padding:16px;max-width:1000px;margin:auto}
+.status{background:#13253b;padding:13px;border-radius:12px;margin-bottom:15px;color:#20d997}
+.buttons{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+button{background:#1c3551;color:white;border:1px solid #31516f;padding:12px 16px;border-radius:9px;font-weight:bold}
+button.active{background:#087e58;border-color:#20d997}
+#matches{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
+.card{background:#14243a;border:1px solid #29415c;border-radius:14px;padding:17px}
+.card h3{margin:0 0 12px;color:#20d997}
+.teams{font-size:19px;font-weight:bold;line-height:1.7}
+.score{font-size:23px;color:#fff;margin:10px 0}
+.info{color:#a9bbd0;font-size:13px;line-height:1.8}
+.live{color:#ff5555;font-weight:bold}
+.empty{background:#14243a;padding:22px;border-radius:12px;color:#bdcce0}
+footer{text-align:center;color:#8094aa;padding:25px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<h1>🏏 DAILY DOSE INDIA</h1>
+<p>CRICKET PRO X • LIVE SCORE CENTER</p>
+</header>
+
+<div class="container">
+<div class="status" id="status">● Connecting to Cricket API...</div>
+
+<div class="buttons">
+<button class="active" onclick="loadMatches('live',this)">🔴 LIVE</button>
+<button onclick="loadMatches('upcoming',this)">📅 UPCOMING</button>
+<button onclick="loadMatches('recent',this)">🏆 RECENT</button>
+<button onclick="loadMatches('live',null)">↻ REFRESH</button>
+</div>
+
+<div id="matches">
+<div class="empty">Loading cricket matches...</div>
+</div>
+</div>
+
+<footer>
+Daily Dose India Cricket Pro X<br>
+Live cricket information • Auto Refresh: 30 Seconds
+</footer>
+
+<script>
+const BASE="https://cricketliveapi.com/api/v1/cricket";
+let current="live";
+let timer;
+
+async function loadMatches(type,btn){
+current=type;
+if(btn){
+document.querySelectorAll("button").forEach(b=>b.classList.remove("active"));
+btn.classList.add("active");
+}
+
+const box=document.getElementById("matches");
+const status=document.getElementById("status");
+
+status.textContent="● Fetching "+type+" matches...";
+box.innerHTML='<div class="empty">Please wait...</div>';
+
+try{
+const response=await fetch(BASE+"/"+type);
+if(!response.ok) throw new Error("API HTTP "+response.status);
+
+const result=await response.json();
+const data=result.data;
+
+if(!Array.isArray(data)) throw new Error("Unexpected API response");
+
+status.textContent="● API CONNECTED | Matches: "+data.length;
+
+if(data.length===0){
+box.innerHTML='<div class="empty">No '+type+' matches available right now.</div>';
+return;
+}
+
+box.innerHTML=data.map(m=>`
+<div class="card">
+<h3>${escapeHTML(m.format||"CRICKET")} • ${escapeHTML(m.status||"Match")}</h3>
+<div class="teams">${escapeHTML(m.teams||"Teams unavailable")}</div>
+<div class="score">${escapeHTML(m.score||"Score unavailable")}</div>
+<div class="info">
+<div>📍 ${escapeHTML(m.venue||"Venue unavailable")}</div>
+<div>🏆 ${escapeHTML(m.series||"Cricket Match")}</div>
+<div>Match ID: ${escapeHTML(m.match_id||"N/A")}</div>
+</div>
+</div>
+`).join("");
+
+}catch(error){
+status.textContent="● API CONNECTION ERROR";
+box.innerHTML=`
+<div class="empty">
+<strong>Unable to load matches.</strong><br><br>
+${escapeHTML(error.message)}<br><br>
+Check API availability, internet connection and CORS access.
+<button onclick="loadMatches(current,null)">TRY AGAIN</button>
+</div>`;
+}
+}
+
+function escapeHTML(value){
+return String(value??"").replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",
+'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+loadMatches("live",document.querySelector("button"));
+timer=setInterval(()=>loadMatches(current,null),30000);
+</script>
+</body>
+</html>
